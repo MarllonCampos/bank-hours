@@ -19,59 +19,52 @@ function App() {
 }
 
 export default App;
-
+interface HourObject {
+  initialHour?: dayjs.Dayjs;
+  finalHour?: dayjs.Dayjs;
+}
 function Day({ date, cut }: { date: Date; cut: number }) {
-  const dayOfWeek = dayjs(date).format("dddd");
-  const month = dayjs(date).format("MMMM");
-  const day = dayjs(date).format("DD");
-  const year = dayjs(date).format("YYYY");
-  const [hourObject, setHourObject] = useState({ initialHour: "", finalHour: "" });
-  const addPadStart = (value: number) => {
-    return String(value).padStart(2, "0");
-  };
+  const dayjsDate = dayjs(date);
+  const dayOfWeek = dayjsDate.format("dddd");
+  const month = dayjsDate.format("MMMM");
+  const day = dayjsDate.format("DD");
+  const year = dayjsDate.format("YYYY");
+  const [hourObject, setHourObject] = useState<HourObject>({});
 
-  const hourBank = useMemo(() => {
-    const initialHourSplit = hourObject.initialHour.split(":");
-    const finalHourSplit = hourObject.finalHour.split(":");
-    if (finalHourSplit.length === 0 || initialHourSplit.length === 0) return 0;
-    const initialHourObject = {
-      hours: Number(initialHourSplit[0]),
-      minute: Number(initialHourSplit[1]),
-      second: Number(initialHourSplit[2]),
-    };
-    const finalHourObject = {
-      hours: Number(finalHourSplit[0]),
-      minute: Number(finalHourSplit[1]),
-      second: Number(finalHourSplit[2]),
-    };
+  function addPadStart(value: number) {
+    return String(Math.floor(value)).padStart(2, "0");
+  }
 
-    const initialHourDate = dayjs(date)
-      .hour(initialHourObject.hours)
-      .minute(initialHourObject.minute)
-      .second(initialHourObject.second);
-    const finalHourDate = dayjs(date)
-      .hour(finalHourObject.hours)
-      .minute(finalHourObject.minute)
-      .second(finalHourObject.second);
-    const hoursDiff = finalHourDate.diff(initialHourDate, "hours");
-    const minutesDiff = finalHourDate.diff(initialHourDate, "minutes");
-    const secondsDiff = finalHourDate.diff(initialHourDate, "seconds") % 60;
-    try {
-      console.log(hoursDiff, minutesDiff, secondsDiff);
-      if (hoursDiff < cut) {
-        throw new Error();
-      }
-      return `${addPadStart(hoursDiff)}:${addPadStart(minutesDiff)}:${addPadStart(secondsDiff)}`;
-    } catch {
-      const actualDate = dayjs().hour();
+  function formatShowHours({ hours, minutes, seconds }: { hours: number; seconds: number; minutes: number }) {
+    return `${addPadStart(hours)}:${addPadStart(minutes)}:${addPadStart(seconds)}`;
+  }
 
-      return 0;
-    }
-  }, [hourObject]);
+  const workedHours = useMemo(() => {
+    const finalHoursDayJs = dayjs(hourObject.finalHour);
+    const initialHoursDayJs = dayjs(hourObject.initialHour);
+
+    if (finalHoursDayJs.isSame(initialHoursDayJs)) return 0;
+    const hours = finalHoursDayJs.diff(initialHoursDayJs, "hours");
+    const minutes = finalHoursDayJs.diff(initialHoursDayJs, "minutes") % 60;
+    const seconds = finalHoursDayJs.diff(initialHoursDayJs, "seconds") % 60;
+    return { hours, minutes, seconds };
+  }, [hourObject.finalHour]);
+
+  const extraHours = useMemo(() => {
+    const newDate = dayjs(hourObject.initialHour).add(cut, "hour");
+    const finalHoursDayJs = dayjs(hourObject.finalHour);
+    const hours = Math.abs(newDate.diff(finalHoursDayJs, "hours"));
+
+    const minutes = Math.abs(newDate.diff(finalHoursDayJs, "minutes") % 60);
+    const seconds = Math.abs(newDate.diff(finalHoursDayJs, "seconds") % 60);
+
+    return { hours, minutes, seconds, hasBankHours: hours > cut };
+  }, [hourObject.finalHour]);
 
   function handleCheckHour() {
-    const newDate = dayjs().format("HH:mm:ss");
-    if (isEmpty(hourObject.initialHour)) setHourObject((prevState) => ({ ...prevState, initialHour: newDate }));
+    const newDate = dayjs();
+
+    if (!hourObject.initialHour) setHourObject((prevState) => ({ ...prevState, initialHour: newDate }));
     else setHourObject((prevState) => ({ ...prevState, finalHour: newDate }));
   }
   const phrase = "Não há hora marcada";
@@ -85,7 +78,7 @@ function Day({ date, cut }: { date: Date; cut: number }) {
       </Popover.Trigger>
 
       <Popover.Portal>
-        <Popover.Content className="min-w-[320px] p-4 rounded-sm bg-zinc-900  text-gray-300 flex flex-col">
+        <Popover.Content className="min-w-[320px] p-5 rounded-xl bg-zinc-900  text-gray-300 flex flex-col">
           <h2 className="mr-1 capitalize text-center font-bold text-gray-200">
             {day}/{month}/{year}
           </h2>
@@ -93,20 +86,34 @@ function Day({ date, cut }: { date: Date; cut: number }) {
 
           <div className="my-2 flex">
             <span className="flex-[0.3]">Entrada:</span>
-            <span className="text-center flex-1">
-              {isEmpty(hourObject.initialHour) ? phrase : hourObject.initialHour}
+            <span className="mx-auto">
+              {!hourObject.initialHour ? phrase : hourObject.initialHour.format("HH:mm:ss")}
             </span>
           </div>
+
           <div className="my-2 flex">
             <span className="flex-[0.3]">Saída:</span>
-            <p className="text-center flex-1">{isEmpty(hourObject.finalHour) ? phrase : hourObject.finalHour}</p>
+            <p className="mx-auto">{!hourObject.finalHour ? phrase : hourObject.finalHour.format("HH:mm:ss")}</p>
           </div>
-          {!Number.isNaN(hourBank) ? (
-            <div className="flex flex-col items-center">
-              <p className="text-cyan-500 font-bold text-center">Banco de Horas</p>
-              <span>{hourBank}</span>
-            </div>
-          ) : null}
+
+          {workedHours !== 0 && (
+            <>
+              <div className="flex flex-col items-center">
+                <p className="text-cyan-500 font-bold text-center">Horas Trabalhadas</p>
+                <span>{formatShowHours(workedHours)}</span>
+              </div>
+
+              {extraHours && (
+                <div className="flex flex-col items-center">
+                  <p className="text-cyan-500 font-bold text-center">Horas Extras</p>
+                  <span>
+                    {!extraHours.hasBankHours && "- "}
+                    {formatShowHours(extraHours)}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
 
           <button className="py-2 px-4 mt-3 bg-purple-900 rounded text-slate-300" onClick={handleCheckHour}>
             Marcar Hora
