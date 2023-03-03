@@ -1,10 +1,7 @@
 import * as Popover from "@radix-ui/react-popover";
 import { X } from "phosphor-react";
 import dayjs from "dayjs";
-import "dayjs/plugin/objectSupport";
 
-import duration from "dayjs/plugin/duration";
-dayjs.extend(duration);
 import { useMemo, useState } from "react";
 const daysOfMonth = dayjs(new Date()).daysInMonth();
 function App() {
@@ -32,7 +29,7 @@ function Day({ date, cut }: { date: Date; cut: number }) {
   const [hourObject, setHourObject] = useState<HourObject>({});
 
   function addPadStart(value: number) {
-    return String(Math.floor(value)).padStart(2, "0");
+    return String(Math.abs(Math.floor(value))).padStart(2, "0");
   }
 
   function formatShowHours({ hours, minutes, seconds }: { hours: number; seconds: number; minutes: number }) {
@@ -43,34 +40,40 @@ function Day({ date, cut }: { date: Date; cut: number }) {
     const finalHoursDayJs = dayjs(hourObject.finalHour);
     const initialHoursDayJs = dayjs(hourObject.initialHour);
 
-    if (finalHoursDayJs.isSame(initialHoursDayJs)) return 0;
-    const hours = finalHoursDayJs.diff(initialHoursDayJs, "hours");
-    const minutes = finalHoursDayJs.diff(initialHoursDayJs, "minutes") % 60;
-    const seconds = finalHoursDayJs.diff(initialHoursDayJs, "seconds") % 60;
+    const duration = dayjs.duration(finalHoursDayJs.diff(initialHoursDayJs));
+    const hours = duration.hours();
+    const minutes = duration.minutes();
+    const seconds = duration.seconds();
+
     return { hours, minutes, seconds };
   }, [hourObject.finalHour]);
 
   const extraHours = useMemo(() => {
-    const newDate = dayjs(hourObject.initialHour).add(cut, "hour");
+    const expectedFinalDate = dayjs(hourObject.initialHour).add(cut, "h");
     const finalHoursDayJs = dayjs(hourObject.finalHour);
-    const hours = Math.abs(newDate.diff(finalHoursDayJs, "hours"));
+    const duration = dayjs.duration(finalHoursDayJs.diff(expectedFinalDate));
 
-    const minutes = Math.abs(newDate.diff(finalHoursDayJs, "minutes") % 60);
-    const seconds = Math.abs(newDate.diff(finalHoursDayJs, "seconds") % 60);
+    const durationHours = duration.hours();
+    const durationMinutes = duration.minutes();
+    const durationSeconds = duration.seconds();
 
-    return { hours, minutes, seconds, hasBankHours: hours > cut };
+    const hasBankHours = durationHours > 0 || durationMinutes > 0 || durationSeconds > 0;
+
+    const hours = hasBankHours ? durationHours : 0;
+    const minutes = hasBankHours ? durationMinutes : 0;
+    const seconds = hasBankHours ? durationSeconds : 0;
+
+    return { hours: durationHours, minutes: durationMinutes, seconds: durationSeconds, hasBankHours };
   }, [hourObject.finalHour]);
 
   function handleCheckHour() {
     const newDate = dayjs();
-
     if (!hourObject.initialHour) setHourObject((prevState) => ({ ...prevState, initialHour: newDate }));
     else setHourObject((prevState) => ({ ...prevState, finalHour: newDate }));
   }
+
   const phrase = "Não há hora marcada";
-  function isEmpty(value: string) {
-    return value == "";
-  }
+
   return (
     <Popover.Root>
       <Popover.Trigger className="w-7 h-7 flex items-center justify-center p-2 rounded-sm border-2 bg-purple-800 border-none text-indigo-200 font-bold">
@@ -96,20 +99,22 @@ function Day({ date, cut }: { date: Date; cut: number }) {
             <p className="mx-auto">{!hourObject.finalHour ? phrase : hourObject.finalHour.format("HH:mm:ss")}</p>
           </div>
 
-          {workedHours !== 0 && (
+          {workedHours && (
             <>
               <div className="flex flex-col items-center">
-                <p className="text-cyan-500 font-bold text-center">Horas Trabalhadas</p>
+                <p className="text-cyan-500 font-bold text-center">Tempo Trabalhado</p>
                 <span>{formatShowHours(workedHours)}</span>
               </div>
 
-              {extraHours && (
+              {extraHours && extraHours.hasBankHours ? (
                 <div className="flex flex-col items-center">
                   <p className="text-cyan-500 font-bold text-center">Horas Extras</p>
-                  <span>
-                    {!extraHours.hasBankHours && "- "}
-                    {formatShowHours(extraHours)}
-                  </span>
+                  <span className="text-lime-600">{formatShowHours(extraHours)}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <p className="text-cyan-500 font-bold text-center">Horas Restantes</p>
+                  <span className="text-red-500">- {formatShowHours(extraHours)}</span>
                 </div>
               )}
             </>
