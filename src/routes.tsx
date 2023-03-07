@@ -1,6 +1,5 @@
 import dayjs from "dayjs";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { DefaultCalendarPicker } from "./components/DefaultPicker";
 import { YearPicker } from "./pages/YearPicker";
 import { MonthPicker } from "./pages/MonthPicker";
 
