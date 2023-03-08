@@ -65,10 +65,16 @@ export function Day({ date, cut }: Props) {
   }
 
   const phrase = "Não há hora marcada";
-
+  const isTodayStyle =
+    "ring-2 ring-rose-200 min-[460px]:ring-gray-300 min-[460px]:hover:ring-rose-200 min-[460px]:hover:scale-105";
+  const isToday = dayjs().format("YYYY/MM/DD") === dayjs(date).format("YYYY/MM/DD");
   return (
     <Popover.Root>
-      <Popover.Trigger className="w-7 h-7 flex items-center justify-center p-2 rounded-sm border-2 bg-purple-800 border-none text-indigo-200 font-bold">
+      <Popover.Trigger
+        className={`w-7 h-7 flex items-center justify-center p-2 rounded-sm border-2 bg-purple-800 border-none text-indigo-200 font-bold ${
+          isToday ? isTodayStyle : ""
+        }`}
+      >
         {day}
       </Popover.Trigger>
 
@@ -116,7 +122,7 @@ export function Day({ date, cut }: Props) {
             Marcar Hora
           </button>
 
-          <Popover.Arrow height={16} width={24} className="fill-zinc-900" />
+          <Popover.Arrow height={23} width={42} className="fill-zinc-900" />
           <Popover.Close>
             <X
               size={22}

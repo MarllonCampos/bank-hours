@@ -30,7 +30,6 @@ export function Picker({ data, itemToMatch, route }: PickerProps) {
     <div className="h-[100%] flex items-start justify-center py-8">
       <div className="grid grid-cols-3 grid-rows-3 gap-2 ">
         {data.map((content, index) => {
-          console.log(parseRoute(content));
           return (
             <Link className={cn(index)} to={`/${parseRoute(content)}`} key={`${content}-${index}`}>
               {content}
