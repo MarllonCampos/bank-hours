@@ -8,5 +8,5 @@ export function YearPicker() {
   const actualYear = dayjs().year();
   const arrayOfYears = Array.from({ length: 9 }, (_f, index) => (index != 4 ? actualYear + (index - 4) : actualYear));
 
-  return <Picker data={arrayOfYears} itemToMatch={actualYear} />;
+  return <Picker data={arrayOfYears} itemToMatch={actualYear} route="content" />;
 }
